@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
 import { Loader2, ZoomIn } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
@@ -26,7 +26,6 @@ export default function Gallery() {
 
   async function fetchPhotos() {
     try {
-      // 1. Hole die Einträge aus der Datenbank
       const { data: dbData, error: dbError } = await supabase
         .from('photos')
         .select('*')
@@ -34,7 +33,6 @@ export default function Gallery() {
 
       if (dbError) throw dbError;
 
-      // 2. Hole die echten Dateien aus dem Storage Bucket (Limit hochgesetzt für viele Gäste)
       const { data: storageData, error: storageError } = await supabase.storage
         .from('wedding-photos')
         .list('', { limit: 5000 });
@@ -42,12 +40,10 @@ export default function Gallery() {
       if (storageError) throw storageError;
 
       if (dbData && storageData) {
-        // 3. Der Magic-Filter: Behalte nur Bilder aus der DB, die AUCH im Storage existieren
         const validPhotos = dbData.filter((dbPhoto) =>
           storageData.some((storageFile) => storageFile.name === dbPhoto.url)
         );
 
-        // 4. Generiere die URLs für die validen Bilder
         const photosWithUrls = validPhotos.map((photo) => ({
           ...photo,
           publicUrl: supabase.storage
@@ -80,7 +76,7 @@ export default function Gallery() {
     );
   }
 
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -90,9 +86,16 @@ export default function Gallery() {
     }
   };
 
-  const item = {
+  const item: Variants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
   };
 
   return (
@@ -115,8 +118,6 @@ export default function Gallery() {
               alt="Hochzeitsmoment"
               className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
               loading="lazy"
-              // NEU: Wenn ein Bild trotzdem nicht geladen werden kann (z.B. defekte Datei),
-              // wird es automatisch unsichtbar gemacht, statt das Design zu zerstören.
               onError={(e) => {
                 e.currentTarget.parentElement?.classList.add('hidden');
               }}
